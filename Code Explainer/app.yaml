@@ -1,0 +1,16 @@
+command: [
+  "python", 
+  "app.py"
+]
+
+env:
+  - name: "SERVING_ENDPOINT"
+    valueFrom: "SERVING_ENDPOINT"
+  - name: "default_catalog"
+    value: "josh_melton"
+  - name: "default_schema"
+    value: "code_explainer"
+  - name: "default_volume"
+    value: "c_code"
+  - name: "default_file"
+    value: "btree.c"
