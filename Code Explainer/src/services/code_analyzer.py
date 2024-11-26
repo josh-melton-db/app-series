@@ -3,6 +3,8 @@ from typing import List, Set, Dict, Optional
 import re
 import networkx as nx
 from .vector_store import CodeVectorStore
+from concurrent.futures import ThreadPoolExecutor
+import threading
 
 @dataclass
 class Variable:
@@ -26,6 +28,8 @@ class CodeAnalyzer:
         self.parsed_files = {}    # Add this to store parsed results
         # Initialize the vector store
         self.vector_store = CodeVectorStore()
+        self.executor = ThreadPoolExecutor(max_workers=1)
+        self._vector_store_lock = threading.Lock()
         
     def read_file_contents(self, file_path: str) -> str:
         """Read contents of a single file from the volume"""
@@ -50,14 +54,11 @@ class CodeAnalyzer:
         
         content = self.read_file_contents(file_path)
         
-        # Add content to vector store
-        try:
-            self.vector_store.add_file(file_path, content)
-        except Exception as e:
-            print(f"Warning: Failed to add to vector store: {str(e)}")
+        # Submit vector store update to run in background
+        self.executor.submit(self._update_vector_store, file_path, content)
         
-        # Remove comments first
-        content = self.remove_comments(content)
+        # Continue with regular parsing
+        content_no_comments = self.remove_comments(content)
         
         # Extract all functions
         functions: Dict[str, Function] = {}
@@ -65,7 +66,7 @@ class CodeAnalyzer:
         # Pattern for function definitions
         func_pattern = r'\b(?:static\s+)?([a-zA-Z_][a-zA-Z0-9_]*\s*\*?)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(([^)]*)\)\s*{'
         
-        for match in re.finditer(func_pattern, content):
+        for match in re.finditer(func_pattern, content_no_comments):
             try:
                 # Extract function info
                 func_name = match.group(2)
@@ -75,14 +76,14 @@ class CodeAnalyzer:
                 brace_count = 1
                 pos = start_pos
                 
-                while brace_count > 0 and pos < len(content):
-                    if content[pos] == '{':
+                while brace_count > 0 and pos < len(content_no_comments):
+                    if content_no_comments[pos] == '{':
                         brace_count += 1
-                    elif content[pos] == '}':
+                    elif content_no_comments[pos] == '}':
                         brace_count -= 1
                     pos += 1
                 
-                body = content[start_pos:pos-1]
+                body = content_no_comments[start_pos:pos-1]
                 
                 # Create function object
                 func = Function(name=func_name, variables={}, body=body)
@@ -105,6 +106,14 @@ class CodeAnalyzer:
         }
         
         return functions
+
+    def _update_vector_store(self, file_path: str, content: str):
+        """Update vector store in background thread"""
+        try:
+            with self._vector_store_lock:
+                self.vector_store.add_file(file_path, content)
+        except Exception as e:
+            print(f"Warning: Failed to add to vector store: {str(e)}")
 
     def remove_comments(self, content: str) -> str:
         """Remove C-style comments from the code"""
@@ -315,10 +324,15 @@ class CodeAnalyzer:
     def search_code(self, query: str, n_results: int = 5) -> list:
         """Search through parsed code using vector similarity"""
         try:
-            return self.vector_store.search(query, n_results)
+            with self._vector_store_lock:
+                return self.vector_store.search(query, n_results)
         except Exception as e:
             print(f"Error searching code: {str(e)}")
             return []
+
+    def __del__(self):
+        """Cleanup thread pool on deletion"""
+        self.executor.shutdown(wait=False)
 
 class SymbolInfo:
     def __init__(self, name, type, dependencies, used_by, function_name):

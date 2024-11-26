@@ -25,21 +25,29 @@ class CodeVectorStore:
         """Split content into overlapping chunks"""
         chunks = []
         
-        # Split content into logical segments (functions, structs, etc.)
-        segments = re.split(r'(\n\n|\n(?=[a-zA-Z_]\w*\s+[a-zA-Z_]\w*\s*\()))', content)
+        # Simpler chunking approach that doesn't rely on regex
+        lines = content.split('\n')
+        current_chunk = []
+        current_size = 0
         
-        current_chunk = ""
-        for segment in segments:
-            if len(current_chunk) + len(segment) > chunk_size and current_chunk:
-                chunks.append(current_chunk)
-                # Keep last part for overlap
-                current_chunk = current_chunk[-200:] + segment
-            else:
-                current_chunk += segment
-        
-        if current_chunk:
-            chunks.append(current_chunk)
+        for line in lines:
+            line_size = len(line) + 1  # +1 for newline
             
+            if current_size + line_size > chunk_size and current_chunk:
+                # Join current chunk and add to chunks
+                chunks.append('\n'.join(current_chunk))
+                # Keep last few lines for overlap
+                overlap_lines = current_chunk[-3:]  # Keep last 3 lines for context
+                current_chunk = overlap_lines + [line]
+                current_size = sum(len(l) + 1 for l in current_chunk)
+            else:
+                current_chunk.append(line)
+                current_size += line_size
+        
+        # Add the last chunk if there's anything left
+        if current_chunk:
+            chunks.append('\n'.join(current_chunk))
+        
         return chunks
 
     def add_file(self, file_path: str, content: str):

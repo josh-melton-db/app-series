@@ -118,8 +118,9 @@ class ChatInterface:
                     ))
                 
                 # Add the last user message with context prepended
+                final_message = code_context + last_message if code_context else last_message
                 api_messages.append(ChatMessage(
-                    content=code_context + last_message if code_context else last_message,
+                    content=final_message,
                     role=ChatMessageRole.USER
                 ))
                 

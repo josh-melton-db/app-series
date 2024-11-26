@@ -63,9 +63,18 @@ class CatalogPicker:
                 className='mb-3'
             ),
             
-            # Add download container with spinner
+            # Add download container with spinner and hidden button
             html.Div([
-                html.Div(id='download-files-container'),
+                html.Div([
+                    dbc.Button(
+                        "Download SQLite Example Files",
+                        id='download-sqlite-files',
+                        color='primary',
+                        size='sm',
+                        className='mt-2',
+                        style={'display': 'none'}  # Hidden by default
+                    ),
+                ], id='download-files-container'),
                 dbc.Spinner(
                     id='download-spinner',
                     color='primary',

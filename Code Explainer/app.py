@@ -13,7 +13,7 @@ except Exception as e:
     raise Exception(f"Error connecting to serving endpoint: {str(e)}")
 
 # Initialize the Dash app
-app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP], suppress_callback_exceptions=True)
 server = app.server
 
 # Initialize chatbot
