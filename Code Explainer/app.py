@@ -4,6 +4,9 @@ from dash import html
 import dash_bootstrap_components as dbc
 from databricks.sdk import WorkspaceClient
 from src.databricks_chatbot import DatabricksChatbot
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Test serving endpoint
 w = WorkspaceClient()
