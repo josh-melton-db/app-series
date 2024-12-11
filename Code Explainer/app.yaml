@@ -14,3 +14,5 @@ env:
     value: "c_code"
   - name: "default_file"
     value: "btree.c"
+  - name: "DATABRICKS_HOST"
+    value: "https://adb-984752964297111.11.azuredatabricks.net"
